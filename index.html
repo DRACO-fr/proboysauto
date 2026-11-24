@@ -181,6 +181,39 @@
 .arow button,.sm{padding:7px 12px;font-size:12px}.mrow{display:flex;gap:10px;margin-top:6px}.err{color:#ff8a8a;font-size:13px;min-height:18px}
 @media(max-width:600px){.af{grid-template-columns:1fr}}
 
+/* ---- simple product cards + detail view ---- */
+.pcard{cursor:pointer;transition:transform .15s,border-color .15s;-webkit-tap-highlight-color:transparent}
+.pcard:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.22)}
+.pcard:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+.pcard .pbody{padding:10px 12px 12px}
+.pcard .pbody h3{font-size:14.5px;font-weight:650}
+.pimg{background-size:cover}
+.pcount{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
+#pd{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.78);display:grid;place-items:center;padding:12px;overflow:auto}
+#pdbox{background:#101318;border:1px solid var(--line);border-radius:20px;width:min(900px,100%);max-height:calc(100vh - 24px);overflow:auto;display:grid;grid-template-columns:1.15fr 1fr;position:relative}
+#pdx{position:absolute;top:10px;right:10px;z-index:5;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:rgba(0,0,0,.6);color:#fff;font-size:20px;cursor:pointer;line-height:1}
+.gal{position:relative;background:#0b0d10;display:flex;flex-direction:column;min-width:0}
+.gmain{position:relative;aspect-ratio:1/1;display:grid;place-items:center;overflow:hidden;touch-action:pan-y}
+.gmain img{width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none}
+.gnone{color:var(--muted);font-size:14px}
+.gnav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(0,0,0,.6);color:#fff;font-size:20px;cursor:pointer}
+.gnav.prev{left:10px}.gnav.next{right:10px}
+.gthumbs{display:flex;gap:8px;padding:10px;overflow-x:auto}
+.gthumbs button{flex:none;width:58px;height:58px;border-radius:10px;border:2px solid transparent;padding:0;background:#0b0d10 center/cover no-repeat;cursor:pointer;opacity:.6}
+.gthumbs button.on{border-color:var(--accent2);opacity:1}
+.pdinfo{padding:24px 22px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.pdinfo h3{margin:0;font-size:22px;line-height:1.25;padding-right:34px}
+.pdinfo .price{font-size:24px}
+.pdcond{display:inline-block;align-self:flex-start;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:13px;font-weight:700}
+.pddesc{color:#cbd0d7;font-size:15px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.pdinfo .btn{margin-top:auto;text-align:center;width:100%}
+@media(max-width:700px){#pdbox{grid-template-columns:1fr}.pdinfo{padding:18px}.pdinfo .btn{margin-top:6px}}
+.ph{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ph div{position:relative;width:72px;height:72px;border-radius:10px;background:#0b0d10 center/cover no-repeat;border:1px solid var(--line)}
+.ph button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:#e5484d;color:#fff;font-size:13px;cursor:pointer;line-height:1}
+.ph i{position:absolute;left:4px;bottom:4px;font-style:normal;font-size:10px;font-weight:800;background:var(--accent);color:#fff;padding:1px 6px;border-radius:999px}
+.ph em{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;border:0;font-size:10px;font-style:normal;text-align:center;cursor:pointer;border-radius:0 0 9px 9px;padding:2px 0}
+
 /* ---- pages + bottom tab bar ---- */
 body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
 .floating{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
@@ -434,6 +467,7 @@ body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
   </main>
 
   <div id="amenu" hidden><button data-a="add">＋ Add product</button><button data-a="manage">☰ Manage stock</button><button data-a="out">Sign out</button></div>
+  <div id="pd" hidden><div id="pdbox" role="dialog" aria-modal="true" aria-label="Product details"></div></div>
   <div id="ov" hidden><div id="modal"></div></div>
 
   <div class="tabbar" role="navigation" aria-label="Pages">
@@ -530,22 +564,57 @@ async function load(){
  try{const s=await getDocs(query(collection(db,'products'),orderBy('createdAt','desc')));P=s.docs.map(d=>({id:d.id,...d.data()}));render()}
  catch(e){$('#empty').textContent='Could not load products.';$('#empty').hidden=false}
 }
+const okImg=u=>typeof u==='string'&&u.startsWith('data:image/');
+const photosOf=p=>(Array.isArray(p.images)&&p.images.length?p.images:(p.image?[p.image]:[])).filter(okImg);
+let gi=0,gph=[];
+function showPhoto(i){
+ gi=(i+gph.length)%gph.length;
+ const m=$('#gmain img');if(m)m.src=gph[gi];
+ D.querySelectorAll('.gthumbs button').forEach((t,k)=>{t.classList.toggle('on',k===gi);if(k===gi)t.scrollIntoView({block:'nearest',inline:'center'})});
+}
+function closeDetail(){$('#pd').hidden=true;$('#pdbox').replaceChildren();D.body.style.overflow=''}
+function openDetail(p){
+ const sold=p.sold||p.stock<=0,box=$('#pdbox');gph=photosOf(p);gi=0;box.replaceChildren();
+ const x=el('button','','✕');x.id='pdx';x.type='button';x.setAttribute('aria-label','Close');x.onclick=closeDetail;
+ const gal=el('div','gal'),gm=el('div','gmain');gm.id='gmain';
+ if(gph.length){
+  const im=el('img');im.alt=p.name;im.src=gph[0];gm.append(im);
+  if(gph.length>1){
+   const pv=el('button','gnav prev','‹'),nx=el('button','gnav next','›');pv.type=nx.type='button';
+   pv.setAttribute('aria-label','Previous photo');nx.setAttribute('aria-label','Next photo');
+   pv.onclick=()=>showPhoto(gi-1);nx.onclick=()=>showPhoto(gi+1);gm.append(pv,nx);
+   let sx=null;
+   gm.ontouchstart=e=>{sx=e.touches[0].clientX};
+   gm.ontouchend=e=>{if(sx==null)return;const d=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(d)>40)showPhoto(gi+(d<0?1:-1))};
+  }
+ }else gm.append(el('span','gnone','No photo'));
+ gal.append(gm);
+ if(gph.length>1){const th=el('div','gthumbs');gph.forEach((u,k)=>{const t=el('button',k===0?'on':'');t.type='button';t.style.backgroundImage='url("'+u+'")';t.setAttribute('aria-label','Photo '+(k+1));t.onclick=()=>showPhoto(k);th.append(t)});gal.append(th)}
+ const info=el('div','pdinfo');info.append(el('h3','',p.name),el('div','price',R(p.price)));
+ if(p.condition)info.append(el('span','pdcond',p.condition));
+ if(p.description)info.append(el('div','pddesc',p.description));
+ const a=el('a','btn btn-primary',sold?'Sold':'Buy');
+ if(sold)a.setAttribute('aria-disabled','true');else{
+  a.href='https://wa.me/'+WA+'?text='+encodeURIComponent("Hi Pro Boys Auto Parts, I'd like to buy: "+p.name+(p.brand?' ('+p.brand+', '+p.condition+')':'')+' at '+R(p.price)+'. Ref: '+p.id.slice(0,6));a.target='_blank';a.rel='noopener'}
+ info.append(a);box.append(x,gal,info);
+ $('#pd').hidden=false;D.body.style.overflow='hidden';box.scrollTop=0;
+}
+$('#pd').onclick=e=>{if(e.target.id==='pd')closeDetail()};
+D.addEventListener('keydown',e=>{if($('#pd').hidden)return;if(e.key==='Escape')closeDetail();else if(gph.length>1&&e.key==='ArrowLeft')showPhoto(gi-1);else if(gph.length>1&&e.key==='ArrowRight')showPhoto(gi+1)});
 function render(){
  const f=$('#filters'),g=$('#grid');f.replaceChildren();g.replaceChildren();
  ['All',...new Set(P.map(p=>p.brand).filter(Boolean))].forEach(b=>{const x=el('button','chip'+(b===flt?' on':''),b);x.type='button';x.onclick=()=>{flt=b;render()};f.append(x)});
  const L=P.filter(p=>flt==='All'||p.brand===flt);$('#empty').textContent='New listings are coming soon. Message us on WhatsApp for any part you need.';$('#empty').hidden=L.length>0;
  L.forEach(p=>{
-  const sold=p.sold||p.stock<=0,c=el('article','pcard'),img=(p.image||'').startsWith('data:image/')?p.image:'',im=el('div','pimg',img?'':'No photo');
-  if(img)im.style.backgroundImage='url("'+img+'")';
+  const sold=p.sold||p.stock<=0,c=el('article','pcard'),ph=photosOf(p),im=el('div','pimg',ph.length?'':'No photo');
+  c.tabIndex=0;c.setAttribute('role','button');c.setAttribute('aria-label','View '+p.name);
+  if(ph.length)im.style.backgroundImage='url("'+ph[0]+'")';
   if(sold)im.append(el('span','badge','SOLD'));
-  const b=el('div','pbody');
-  b.append(el('h3','',p.name),el('div','pmeta',[p.brand,p.condition].filter(Boolean).join(' · ')));
-  if(p.description)b.append(el('div','pmeta pdesc',p.description));
-  b.append(el('div','price',R(p.price)),el('div','pmeta',sold?'Out of stock':p.stock+' in stock'));
-  const a=el('a','btn btn-primary',sold?'Sold':'Buy on WhatsApp');
-  if(sold)a.setAttribute('aria-disabled','true');else{
-   a.href='https://wa.me/'+WA+'?text='+encodeURIComponent("Hi Pro Boys Auto Parts, I'd like to buy: "+p.name+(p.brand?' ('+p.brand+', '+p.condition+')':'')+' at '+R(p.price)+'. Ref: '+p.id.slice(0,6));a.target='_blank';a.rel='noopener'}
-  b.append(a);c.append(im,b);g.append(c)});
+  if(ph.length>1)im.append(el('span','pcount','1/'+ph.length));
+  const b=el('div','pbody');b.append(el('h3','',p.name));
+  c.append(im,b);c.onclick=()=>openDetail(p);
+  c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openDetail(p)}};
+  g.append(c)});
 }
 const open=(title,...nodes)=>{const m=$('#modal');m.replaceChildren(el('h3','',title),...nodes);$('#ov').hidden=false};
 const close=()=>{$('#ov').hidden=true;$('#modal').replaceChildren()};
@@ -559,14 +628,19 @@ function loginForm(){
  const af=el('div','af');af.append(field('Email',em,1),field('Password',pw,1));
  open('Admin sign in',af,err,go);
 }
-async function shrink(f){const b=await createImageBitmap(f),s=Math.min(1,800/Math.max(b.width,b.height)),c=D.createElement('canvas');c.width=b.width*s;c.height=b.height*s;c.getContext('2d').drawImage(b,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7)}
+async function shrink(f,max=800,q=.7){const b=await createImageBitmap(f),s=Math.min(1,max/Math.max(b.width,b.height)),c=D.createElement('canvas');c.width=Math.round(b.width*s);c.height=Math.round(b.height*s);c.getContext('2d').drawImage(b,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q)}
 function productForm(p){
  p=p||{};
  const name=inp('text'),price=inp('number'),brand=inp('text','e.g. BMW'),stock=inp('number'),file=inp('file'),desc=el('textarea');
  const cond=el('select');['New','Quality used'].forEach(o=>cond.append(el('option','',o)));
- file.accept='image/*';desc.rows=2;
+ file.accept='image/*';file.multiple=true;desc.rows=2;
  name.value=p.name||'';price.value=p.price??'';brand.value=p.brand||'';stock.value=p.stock??1;desc.value=p.description||'';cond.value=p.condition||'New';
- const af=el('div','af');af.append(field('Part name',name,1),field('Price (R)',price),field('Brand',brand),field('Condition',cond),field('Stock',stock),field('Photo',file,1),field('Description / fits',desc,1));
+ let photos=photosOf(p).slice();const phbox=el('div','ph full'),MAXP=8,BUDGET=900000;
+ const drawPh=()=>{phbox.replaceChildren();photos.forEach((u,k)=>{const d=el('div');d.style.backgroundImage='url("'+u+'")';
+   const rm=el('button','','×');rm.type='button';rm.setAttribute('aria-label','Remove photo');rm.onclick=()=>{photos.splice(k,1);drawPh()};d.append(rm);
+   if(k===0)d.append(el('i','','Cover'));else{const mk=el('em','','Make cover');mk.onclick=()=>{photos.unshift(photos.splice(k,1)[0]);drawPh()};d.append(mk)}
+   phbox.append(d)})};drawPh();
+ const af=el('div','af');af.append(field('Part name',name,1),field('Price (R)',price),field('Brand',brand),field('Condition',cond),field('Stock',stock),field('Photos (first one is the cover)',file,1),phbox,field('Description / fits',desc,1));
  const err=el('div','err'),save=el('button','btn btn-primary',p.id?'Save changes':'Add product'),cancel=el('button','btn btn-secondary','Cancel'),row=el('div','mrow');
  save.type=cancel.type='button';cancel.onclick=close;row.append(save,cancel);
  save.onclick=async()=>{
@@ -574,7 +648,13 @@ function productForm(p){
   save.disabled=true;err.textContent='Saving...';
   const rec={name:name.value.trim(),price:+price.value||0,brand:brand.value.trim(),condition:cond.value,stock:+stock.value||0,description:desc.value.trim()};
   try{
-   if(file.files[0]){rec.image=await shrink(file.files[0]);if(rec.image.length>900000)throw new Error('Photo is too large')}
+   let all=photos.slice();
+   for(const f of file.files)all.push(await shrink(f));
+   if(all.length>MAXP)throw new Error('Maximum '+MAXP+' photos per product');
+   let tot=all.reduce((n,u)=>n+u.length,0);
+   if(tot>BUDGET){const n0=photos.length;all=photos.slice();for(const f of file.files)all.push(await shrink(f,640,.55));tot=all.reduce((n,u)=>n+u.length,0)}
+   if(tot>BUDGET)throw new Error('Photos are too large in total. Remove one or two.');
+   rec.images=all;rec.image=all[0]||''
    if(p.id)await updateDoc(doc(db,'products',p.id),rec);else await addDoc(collection(db,'products'),{...rec,sold:false,createdAt:serverTimestamp()});
    close();await load();
   }catch(e){err.textContent='Failed: '+(e.message||'not allowed');save.disabled=false}};
