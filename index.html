@@ -449,29 +449,30 @@ Please let me know availability and price. Thank you.`;
       window.open("https://wa.me/27670185846?text=" + encodeURIComponent(message), "_blank");
     });
   </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script>
-const SUPABASE_URL='PASTE_YOUR_SUPABASE_URL', SUPABASE_ANON_KEY='PASTE_YOUR_ANON_KEY';
-const ADMINS=['moagil75@gmail.com','kabomoagi14@gmail.com'], WA='27670185846', BUCKET='product-images';
+<script type="module">import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {getFirestore,collection,getDocs,addDoc,updateDoc,deleteDoc,doc,query,orderBy,serverTimestamp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+/* 1) Paste your Firebase web app config here (Project settings > Your apps > Web app) */
+const firebaseConfig={apiKey:'PASTE_API_KEY',authDomain:'PASTE_PROJECT.firebaseapp.com',projectId:'PASTE_PROJECT_ID',appId:'PASTE_APP_ID'};
+const ADMINS=['moagil75@gmail.com','kabomoagi14@gmail.com'], WA='27670185846';
 const D=document,$=q=>D.querySelector(q);
 const el=(t,c,x)=>{const e=D.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
 const R=n=>'R'+Number(n||0).toLocaleString('en-ZA');
-const ok=!SUPABASE_URL.startsWith('PASTE');
-const sb=ok?supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
+const ok=!firebaseConfig.apiKey.startsWith('PASTE');
+let auth,db;if(ok){const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app)}
 let P=[],flt='All',isAdmin=false;
 async function load(){
  if(!ok){$('#empty').textContent='Shop not connected yet.';$('#empty').hidden=false;return}
- const {data,error}=await sb.from('products').select('*').order('created_at',{ascending:false});
- if(error){$('#empty').textContent='Could not load products.';$('#empty').hidden=false;return}
- P=data||[];render();
+ try{const s=await getDocs(query(collection(db,'products'),orderBy('createdAt','desc')));P=s.docs.map(d=>({id:d.id,...d.data()}));render()}
+ catch(e){$('#empty').textContent='Could not load products.';$('#empty').hidden=false}
 }
 function render(){
  const f=$('#filters'),g=$('#grid');f.replaceChildren();g.replaceChildren();
  ['All',...new Set(P.map(p=>p.brand).filter(Boolean))].forEach(b=>{const x=el('button','chip'+(b===flt?' on':''),b);x.type='button';x.onclick=()=>{flt=b;render()};f.append(x)});
  const L=P.filter(p=>flt==='All'||p.brand===flt);$('#empty').textContent='New listings are coming soon. Message us on WhatsApp for any part you need.';$('#empty').hidden=L.length>0;
  L.forEach(p=>{
-  const sold=p.sold||p.stock<=0,c=el('article','pcard'),im=el('div','pimg',p.image_url?'':'No photo');
-  if(p.image_url)im.style.backgroundImage='url("'+encodeURI(p.image_url)+'")';
+  const sold=p.sold||p.stock<=0,c=el('article','pcard'),img=(p.image||'').startsWith('data:image/')?p.image:'',im=el('div','pimg',img?'':'No photo');
+  if(img)im.style.backgroundImage='url("'+img+'")';
   if(sold)im.append(el('span','badge','SOLD'));
   const b=el('div','pbody');
   b.append(el('h3','',p.name),el('div','pmeta',[p.brand,p.condition].filter(Boolean).join(' · ')));
@@ -479,10 +480,9 @@ function render(){
   b.append(el('div','price',R(p.price)),el('div','pmeta',sold?'Out of stock':p.stock+' in stock'));
   const a=el('a','btn btn-primary',sold?'Sold':'Buy on WhatsApp');
   if(sold)a.setAttribute('aria-disabled','true');else{
-   a.href='https://wa.me/'+WA+'?text='+encodeURIComponent("Hi Pro Boys Auto Parts, I'd like to buy: "+p.name+(p.brand?' ('+p.brand+', '+p.condition+')':'')+' at '+R(p.price)+'. Ref: '+p.id.slice(0,8));a.target='_blank';a.rel='noopener'}
+   a.href='https://wa.me/'+WA+'?text='+encodeURIComponent("Hi Pro Boys Auto Parts, I'd like to buy: "+p.name+(p.brand?' ('+p.brand+', '+p.condition+')':'')+' at '+R(p.price)+'. Ref: '+p.id.slice(0,6));a.target='_blank';a.rel='noopener'}
   b.append(a);c.append(im,b);g.append(c)});
 }
-/* modal + menu */
 const open=(title,...nodes)=>{const m=$('#modal');m.replaceChildren(el('h3','',title),...nodes);$('#ov').hidden=false};
 const close=()=>{$('#ov').hidden=true;$('#modal').replaceChildren()};
 $('#ov').onclick=e=>{if(e.target.id==='ov')close()};
@@ -491,11 +491,11 @@ function inp(type,ph){const i=el('input');i.type=type;if(ph)i.placeholder=ph;ret
 function loginForm(){
  const em=inp('email','Email'),pw=inp('password','Password'),err=el('div','err'),go=el('button','btn btn-primary','Sign in');
  go.type='button';
- go.onclick=async()=>{err.textContent='';const {error}=await sb.auth.signInWithPassword({email:em.value.trim(),password:pw.value});
-  if(error){err.textContent='Sign in failed. Check your email and password.';return}close()};
+ go.onclick=async()=>{err.textContent='';try{await signInWithEmailAndPassword(auth,em.value.trim(),pw.value);close()}catch(e){err.textContent='Sign in failed. Check your email and password.'}};
  const af=el('div','af');af.append(field('Email',em,1),field('Password',pw,1));
  open('Admin sign in',af,err,go);
 }
+async function shrink(f){const b=await createImageBitmap(f),s=Math.min(1,800/Math.max(b.width,b.height)),c=D.createElement('canvas');c.width=b.width*s;c.height=b.height*s;c.getContext('2d').drawImage(b,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7)}
 function productForm(p){
  p=p||{};
  const name=inp('text'),price=inp('number'),brand=inp('text','e.g. BMW'),stock=inp('number'),file=inp('file'),desc=el('textarea');
@@ -510,37 +510,32 @@ function productForm(p){
   save.disabled=true;err.textContent='Saving...';
   const rec={name:name.value.trim(),price:+price.value||0,brand:brand.value.trim(),condition:cond.value,stock:+stock.value||0,description:desc.value.trim()};
   try{
-   if(file.files[0]){const blob=await shrink(file.files[0]),path=Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.jpg';
-    const u=await sb.storage.from(BUCKET).upload(path,blob,{contentType:'image/jpeg'});if(u.error)throw u.error;
-    rec.image_url=sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl}
-   const r=p.id?await sb.from('products').update(rec).eq('id',p.id):await sb.from('products').insert(rec);
-   if(r.error)throw r.error;close();await load();
+   if(file.files[0]){rec.image=await shrink(file.files[0]);if(rec.image.length>900000)throw new Error('Photo is too large')}
+   if(p.id)await updateDoc(doc(db,'products',p.id),rec);else await addDoc(collection(db,'products'),{...rec,sold:false,createdAt:serverTimestamp()});
+   close();await load();
   }catch(e){err.textContent='Failed: '+(e.message||'not allowed');save.disabled=false}};
  open(p.id?'Edit product':'Add product',af,err,row);
 }
-async function shrink(f){const b=await createImageBitmap(f),s=Math.min(1,1000/Math.max(b.width,b.height)),c=D.createElement('canvas');c.width=b.width*s;c.height=b.height*s;c.getContext('2d').drawImage(b,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,'image/jpeg',.8))}
 function manage(){
  const box=el('div');
  if(!P.length)box.append(el('p','pmeta','No products yet.'));
  P.forEach(p=>{const r=el('div','arow'),w=el('span'),sold=p.sold||p.stock<=0;
   r.append(el('span','',p.name+' · '+R(p.price)+' · '+(sold?'sold':p.stock+' left')));
-  [['Edit',()=>productForm(p)],[p.sold?'Available':'Mark sold',async()=>{await sb.from('products').update({sold:!p.sold}).eq('id',p.id);await load();manage()}],
-   ['Delete',async()=>{if(!confirm('Delete '+p.name+'?'))return;
-     if(p.image_url&&p.image_url.includes('/'+BUCKET+'/'))await sb.storage.from(BUCKET).remove([decodeURIComponent(p.image_url.split('/'+BUCKET+'/')[1])]);
-     const r2=await sb.from('products').delete().eq('id',p.id);if(r2.error)alert(r2.error.message);await load();manage()}]
+  [['Edit',()=>productForm(p)],
+   [p.sold?'Available':'Mark sold',async()=>{try{await updateDoc(doc(db,'products',p.id),{sold:!p.sold})}catch(e){alert(e.message)}await load();manage()}],
+   ['Delete',async()=>{if(!confirm('Delete '+p.name+'?'))return;try{await deleteDoc(doc(db,'products',p.id))}catch(e){alert(e.message)}await load();manage()}]
   ].forEach(([n,fn])=>{const x=el('button','btn btn-secondary sm',n);x.type='button';x.onclick=fn;w.append(x)});
   r.append(w);box.append(r)});
  const done=el('button','btn btn-secondary','Close');done.type='button';done.onclick=close;done.style.marginTop='14px';
  open('Manage products',box,done);
 }
-$('#fab').onclick=()=>{if(!ok){alert('Add your Supabase URL and key in index.html first.');return}
+$('#fab').onclick=()=>{if(!ok){alert('Add your Firebase config in index.html first.');return}
  if(!isAdmin)loginForm();else $('#amenu').hidden=!$('#amenu').hidden};
 $('#amenu').onclick=async e=>{const a=e.target.dataset.a;if(!a)return;$('#amenu').hidden=true;
- if(a==='add')productForm();else if(a==='manage')manage();else await sb.auth.signOut()};
-function setAdmin(sess){const em=(sess&&sess.user&&sess.user.email||'').toLowerCase();
- isAdmin=ADMINS.includes(em);$('#fab').textContent=isAdmin?'⚙':'🔒';$('#fab').classList.toggle('in',isAdmin);if(!isAdmin)$('#amenu').hidden=true}
+ if(a==='add')productForm();else if(a==='manage')manage();else await signOut(auth)};
+function setAdmin(u){isAdmin=!!u&&ADMINS.includes((u.email||'').toLowerCase());$('#fab').textContent=isAdmin?'⚙':'🔒';$('#fab').classList.toggle('in',isAdmin);if(!isAdmin)$('#amenu').hidden=true}
 load();
-if(ok){sb.auth.getSession().then(({data})=>setAdmin(data.session));sb.auth.onAuthStateChange((_e,s)=>setAdmin(s))}
+if(ok)onAuthStateChanged(auth,setAdmin);
 </script>
 </body>
 </html>
