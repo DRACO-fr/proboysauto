@@ -168,7 +168,7 @@
 .pbody h3{margin:0;font-size:17px}.pmeta{color:var(--muted);font-size:13px}.price{font-size:22px;font-weight:800}
 .pbody .btn{margin-top:auto}.btn[aria-disabled=true]{opacity:.45;pointer-events:none;background:#222}
 .emptyp{color:var(--muted);text-align:center;padding:40px 0}[hidden]{display:none!important}
-#fab{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:18px;cursor:pointer;display:inline-grid;place-items:center;padding:0}
+#fab{flex:none;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:#fff;font:inherit;font-weight:750;font-size:14px;cursor:pointer;padding:12px 17px}#fab.in{background:var(--accent);border-color:var(--accent)}@media(max-width:600px){#fab,.mobile-menu{padding:9px 13px!important;font-size:12.5px!important}.brand span{font-size:12px}}
 #amenu{position:fixed;right:16px;top:78px;z-index:50;background:#101318;border:1px solid var(--line);border-radius:14px;padding:6px;min-width:180px;box-shadow:var(--shadow)}
 #amenu button{display:block;width:100%;text-align:left;background:none;border:0;color:#fff;padding:11px 12px;border-radius:9px;font:inherit;font-size:14px;cursor:pointer}
 #amenu button:hover{background:rgba(255,255,255,.07)}
@@ -200,7 +200,7 @@
         </div>
         <a class="nav-cta" href="https://wa.me/27670185846?text=Hi%20Pro%20Boys%20Auto%20Parts%2C%20I%27d%20like%20to%20enquire%20about%20a%20vehicle%20part.">WhatsApp us</a>
         <a class="btn btn-secondary mobile-menu" href="#enquiry">Enquire</a>
-        <button id="fab" type="button" aria-label="Admin menu" hidden>⚙</button>
+        <button id="fab" type="button">Sign in</button>
       </nav>
     </div>
   </header>
@@ -269,7 +269,7 @@
 <div class="chips" id="filters"></div><div class="pgrid" id="grid"></div>
 <p class="emptyp" id="empty" hidden>New listings are coming soon. Message us on WhatsApp for any part you need.</p>
 </div></section>
-<div id="amenu" hidden><button data-a="add">＋ Add product</button><button data-a="manage">☰ Manage products</button><button data-a="out">Sign out</button></div>
+<div id="amenu" hidden><button data-a="add">＋ Add product</button><button data-a="manage">☰ Manage stock</button><button data-a="out">Sign out</button></div>
 <div id="ov" hidden><div id="modal"></div></div>
 <section id="store">
       <div class="container">
@@ -515,25 +515,26 @@ function productForm(p){
   }catch(e){err.textContent='Failed: '+(e.message||'not allowed');save.disabled=false}};
  open(p.id?'Edit product':'Add product',af,err,row);
 }
+async function bump(p,d){try{await updateDoc(doc(db,'products',p.id),{stock:Math.max(0,(+p.stock||0)+d)})}catch(e){alert(e.message)}await load();manage()}
 function manage(){
  const box=el('div');
  if(!P.length)box.append(el('p','pmeta','No products yet.'));
  P.forEach(p=>{const r=el('div','arow'),w=el('span'),sold=p.sold||p.stock<=0;
   r.append(el('span','',p.name+' · '+R(p.price)+' · '+(sold?'sold':p.stock+' left')));
-  [['Edit',()=>productForm(p)],
+  [['−',()=>bump(p,-1)],['+',()=>bump(p,1)],['Edit',()=>productForm(p)],
    [p.sold?'Available':'Mark sold',async()=>{try{await updateDoc(doc(db,'products',p.id),{sold:!p.sold})}catch(e){alert(e.message)}await load();manage()}],
    ['Delete',async()=>{if(!confirm('Delete '+p.name+'?'))return;try{await deleteDoc(doc(db,'products',p.id))}catch(e){alert(e.message)}await load();manage()}]
   ].forEach(([n,fn])=>{const x=el('button','btn btn-secondary sm',n);x.type='button';x.onclick=fn;w.append(x)});
   r.append(w);box.append(r)});
  const done=el('button','btn btn-secondary','Close');done.type='button';done.onclick=close;done.style.marginTop='14px';
- open('Manage products',box,done);
+ open('Manage stock',box,done);
 }
 $('#fab').onclick=()=>{if(!ok){alert('Add your Firebase config in index.html first.');return}
  if(!isAdmin)loginForm();else $('#amenu').hidden=!$('#amenu').hidden};
 $('#amenu').onclick=async e=>{const a=e.target.dataset.a;if(!a)return;$('#amenu').hidden=true;
  if(a==='add')productForm();else if(a==='manage')manage();else await signOut(auth)};
 let shown=false;
-function setAdmin(u){isAdmin=!!u&&ADMINS.includes((u.email||'').toLowerCase());$('#fab').hidden=!isAdmin;if(!isAdmin)$('#amenu').hidden=true;
+function setAdmin(u){isAdmin=!!u&&ADMINS.includes((u.email||'').toLowerCase());$('#fab').textContent=isAdmin?'Add':'Sign in';$('#fab').classList.toggle('in',isAdmin);if(!isAdmin)$('#amenu').hidden=true;
  if(isAdmin&&location.hash==='#admin')history.replaceState(null,'',location.pathname+location.search);
  if(!isAdmin&&location.hash==='#admin'&&!shown){shown=true;loginForm()}}
 load();
