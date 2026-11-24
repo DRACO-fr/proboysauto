@@ -189,9 +189,10 @@
 .pcard .pbody h3{font-size:14.5px;font-weight:650}
 .pimg{background-size:cover}
 .pcount{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
-#pd{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.78);display:grid;place-items:center;padding:12px;overflow:auto}
-#pdbox{background:#101318;border:1px solid var(--line);border-radius:20px;width:min(900px,100%);max-height:calc(100vh - 24px);overflow:auto;display:grid;grid-template-columns:1.15fr 1fr;position:relative}
-#pdx{position:absolute;top:10px;right:10px;z-index:5;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:rgba(0,0,0,.6);color:#fff;font-size:20px;cursor:pointer;line-height:1}
+#pdbox{background:#101318;border:1px solid var(--line);border-radius:20px;overflow:hidden;display:grid;grid-template-columns:1.15fr 1fr}
+.backlink{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-weight:700;font-size:14px;margin-bottom:16px;padding:8px 0}.backlink:hover{color:#fff}
+#page-product section{padding:28px 0 70px}@media(max-width:560px){#page-product section{padding:18px 0 56px}}
+.pcard{color:inherit;text-decoration:none}
 .gal{position:relative;background:#0b0d10;display:flex;flex-direction:column;min-width:0}
 .gmain{position:relative;aspect-ratio:1/1;display:grid;place-items:center;overflow:hidden;touch-action:pan-y}
 .gmain img{width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none}
@@ -202,7 +203,7 @@
 .gthumbs button{flex:none;width:58px;height:58px;border-radius:10px;border:2px solid transparent;padding:0;background:#0b0d10 center/cover no-repeat;cursor:pointer;opacity:.6}
 .gthumbs button.on{border-color:var(--accent2);opacity:1}
 .pdinfo{padding:24px 22px;display:flex;flex-direction:column;gap:12px;min-width:0}
-.pdinfo h3{margin:0;font-size:22px;line-height:1.25;padding-right:34px}
+.pdinfo h3{margin:0;font-size:24px;line-height:1.25}
 .pdinfo .price{font-size:24px}
 .pdcond{display:inline-block;align-self:flex-start;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:13px;font-weight:700}
 .pddesc{color:#cbd0d7;font-size:15px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -458,7 +459,7 @@ body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
       <div class="container">
         <div class="section-head">
           <div><div class="section-kicker">Shop</div><h2>Parts in stock.</h2></div>
-          <p>Tap "Buy on WhatsApp" on any part and your message is ready to send. We confirm availability on WhatsApp.</p>
+          <p>Tap any part to see its photos and details. We confirm availability on WhatsApp.</p>
         </div>
         <div class="chips" id="filters"></div><div class="pgrid" id="grid"></div>
         <p class="emptyp" id="empty" hidden>New listings are coming soon. Message us on WhatsApp for any part you need.</p>
@@ -467,7 +468,15 @@ body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
   </main>
 
   <div id="amenu" hidden><button data-a="add">＋ Add product</button><button data-a="manage">☰ Manage stock</button><button data-a="out">Sign out</button></div>
-  <div id="pd" hidden><div id="pdbox" role="dialog" aria-modal="true" aria-label="Product details"></div></div>
+  <main id="page-product" class="page" hidden>
+    <section>
+      <div class="container">
+        <a class="backlink" href="#shop">← Back to shop</a>
+        <div id="pdbox"></div>
+      </div>
+    </section>
+  </main>
+
   <div id="ov" hidden><div id="modal"></div></div>
 
   <div class="tabbar" role="navigation" aria-label="Pages">
@@ -514,8 +523,8 @@ Please let me know availability and price. Thank you.`;
   </script>
 <script>
 (function(){
-  var pages={home:document.getElementById("page-home"),shop:document.getElementById("page-shop")};
-  var titles={home:document.title,shop:"Shop | Pro Boys Auto Parts"};
+  var pages={home:document.getElementById("page-home"),shop:document.getElementById("page-shop"),product:document.getElementById("page-product")};
+  var titles={home:document.title,shop:"Shop | Pro Boys Auto Parts",product:"Product | Pro Boys Auto Parts"};
   var links=document.querySelectorAll("[data-tab]"),root=document.documentElement,current="home";
   function instant(fn){var p=root.style.scrollBehavior;root.style.scrollBehavior="auto";fn();root.style.scrollBehavior=p}
   function show(name){
@@ -524,7 +533,7 @@ Please let me know availability and price. Thank you.`;
     var pg=pages[name];pg.classList.remove("page-enter");void pg.offsetWidth;pg.classList.add("page-enter");
     current=name;document.title=titles[name];
     links.forEach(function(a){
-      var on=a.dataset.tab===name;a.classList.toggle("on",on);
+      var on=a.dataset.tab===(name==="product"?"shop":name);a.classList.toggle("on",on);
       if(a.classList.contains("tab")){if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")}
     });
     instant(function(){window.scrollTo(0,0)});
@@ -534,6 +543,7 @@ Please let me know availability and price. Thank you.`;
     var h=decodeURIComponent(location.hash.slice(1));
     if(h==="admin")return;
     if(h==="shop"){show("shop");return}
+    if(h.indexOf("product-")===0){show("product");return}
     var target=h&&h!=="home"?document.getElementById(h):null,switched=show("home");
     if(target){if(switched)instant(function(){target.scrollIntoView()});else target.scrollIntoView()}
     else if(h==="home"&&!switched)window.scrollTo({top:0,behavior:"smooth"});
@@ -560,22 +570,26 @@ const ok=!firebaseConfig.apiKey.startsWith('PASTE');
 let auth,db;if(ok){const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app)}
 let P=[],flt='All',isAdmin=false;
 async function load(){
- if(!ok){$('#empty').textContent='Shop not connected yet.';$('#empty').hidden=false;return}
- try{const s=await getDocs(query(collection(db,'products'),orderBy('createdAt','desc')));P=s.docs.map(d=>({id:d.id,...d.data()}));render()}
- catch(e){$('#empty').textContent='Could not load products.';$('#empty').hidden=false}
+ if(!ok){loaded=true;renderProduct();$('#empty').textContent='Shop not connected yet.';$('#empty').hidden=false;return}
+ try{const s=await getDocs(query(collection(db,'products'),orderBy('createdAt','desc')));P=s.docs.map(d=>({id:d.id,...d.data()}));loaded=true;render()}
+ catch(e){loaded=true;renderProduct();$('#empty').textContent='Could not load products.';$('#empty').hidden=false}
 }
 const okImg=u=>typeof u==='string'&&u.startsWith('data:image/');
 const photosOf=p=>(Array.isArray(p.images)&&p.images.length?p.images:(p.image?[p.image]:[])).filter(okImg);
-let gi=0,gph=[];
+let gi=0,gph=[],loaded=false,shopY=0;
+const curId=()=>{const h=decodeURIComponent(location.hash.slice(1));return h.indexOf('product-')===0?h.slice(8):null};
 function showPhoto(i){
  gi=(i+gph.length)%gph.length;
  const m=$('#gmain img');if(m)m.src=gph[gi];
  D.querySelectorAll('.gthumbs button').forEach((t,k)=>{t.classList.toggle('on',k===gi);if(k===gi)t.scrollIntoView({block:'nearest',inline:'center'})});
 }
-function closeDetail(){$('#pd').hidden=true;$('#pdbox').replaceChildren();D.body.style.overflow=''}
-function openDetail(p){
- const sold=p.sold||p.stock<=0,box=$('#pdbox');gph=photosOf(p);gi=0;box.replaceChildren();
- const x=el('button','','✕');x.id='pdx';x.type='button';x.setAttribute('aria-label','Close');x.onclick=closeDetail;
+function renderProduct(){
+ const id=curId();if(!id)return;
+ const box=$('#pdbox'),p=P.find(x=>x.id===id);
+ box.replaceChildren();
+ if(!p){box.style.display='block';box.append(el('p','emptyp',loaded?'This product is no longer available.':'Loading…'));return}
+ box.style.display='';
+ const sold=p.sold||p.stock<=0;gph=photosOf(p);gi=0;D.title=p.name+' | Pro Boys Auto Parts';
  const gal=el('div','gal'),gm=el('div','gmain');gm.id='gmain';
  if(gph.length){
   const im=el('img');im.alt=p.name;im.src=gph[0];gm.append(im);
@@ -596,25 +610,27 @@ function openDetail(p){
  const a=el('a','btn btn-primary',sold?'Sold':'Buy');
  if(sold)a.setAttribute('aria-disabled','true');else{
   a.href='https://wa.me/'+WA+'?text='+encodeURIComponent("Hi Pro Boys Auto Parts, I'd like to buy: "+p.name+(p.brand?' ('+p.brand+', '+p.condition+')':'')+' at '+R(p.price)+'. Ref: '+p.id.slice(0,6));a.target='_blank';a.rel='noopener'}
- info.append(a);box.append(x,gal,info);
- $('#pd').hidden=false;D.body.style.overflow='hidden';box.scrollTop=0;
+ info.append(a);box.append(gal,info);
 }
-$('#pd').onclick=e=>{if(e.target.id==='pd')closeDetail()};
-D.addEventListener('keydown',e=>{if($('#pd').hidden)return;if(e.key==='Escape')closeDetail();else if(gph.length>1&&e.key==='ArrowLeft')showPhoto(gi-1);else if(gph.length>1&&e.key==='ArrowRight')showPhoto(gi+1)});
+addEventListener('hashchange',()=>{
+ if(curId())renderProduct();
+ else if(location.hash==='#shop'&&shopY){const r=D.documentElement,b=r.style.scrollBehavior;r.style.scrollBehavior='auto';scrollTo(0,shopY);r.style.scrollBehavior=b;shopY=0}
+});
+D.addEventListener('keydown',e=>{if(!curId()||gph.length<2)return;if(e.key==='ArrowLeft')showPhoto(gi-1);else if(e.key==='ArrowRight')showPhoto(gi+1)});
 function render(){
  const f=$('#filters'),g=$('#grid');f.replaceChildren();g.replaceChildren();
  ['All',...new Set(P.map(p=>p.brand).filter(Boolean))].forEach(b=>{const x=el('button','chip'+(b===flt?' on':''),b);x.type='button';x.onclick=()=>{flt=b;render()};f.append(x)});
  const L=P.filter(p=>flt==='All'||p.brand===flt);$('#empty').textContent='New listings are coming soon. Message us on WhatsApp for any part you need.';$('#empty').hidden=L.length>0;
  L.forEach(p=>{
-  const sold=p.sold||p.stock<=0,c=el('article','pcard'),ph=photosOf(p),im=el('div','pimg',ph.length?'':'No photo');
-  c.tabIndex=0;c.setAttribute('role','button');c.setAttribute('aria-label','View '+p.name);
+  const sold=p.sold||p.stock<=0,c=el('a','pcard'),ph=photosOf(p),im=el('div','pimg',ph.length?'':'No photo');
+  c.href='#product-'+p.id;c.onclick=()=>{shopY=scrollY};
   if(ph.length)im.style.backgroundImage='url("'+ph[0]+'")';
   if(sold)im.append(el('span','badge','SOLD'));
   if(ph.length>1)im.append(el('span','pcount','1/'+ph.length));
   const b=el('div','pbody');b.append(el('h3','',p.name));
-  c.append(im,b);c.onclick=()=>openDetail(p);
-  c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openDetail(p)}};
+  c.append(im,b);
   g.append(c)});
+ renderProduct();
 }
 const open=(title,...nodes)=>{const m=$('#modal');m.replaceChildren(el('h3','',title),...nodes);$('#ov').hidden=false};
 const close=()=>{$('#ov').hidden=true;$('#modal').replaceChildren()};
