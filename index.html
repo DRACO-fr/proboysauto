@@ -168,9 +168,8 @@
 .pbody h3{margin:0;font-size:17px}.pmeta{color:var(--muted);font-size:13px}.price{font-size:22px;font-weight:800}
 .pbody .btn{margin-top:auto}.btn[aria-disabled=true]{opacity:.45;pointer-events:none;background:#222}
 .emptyp{color:var(--muted);text-align:center;padding:40px 0}[hidden]{display:none!important}
-#fab{position:fixed;right:16px;bottom:16px;z-index:50;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#101318;color:#fff;font-size:18px;cursor:pointer;box-shadow:var(--shadow);opacity:.85}
-#fab.in{background:var(--accent);opacity:1}
-#amenu{position:fixed;right:16px;bottom:68px;z-index:50;background:#101318;border:1px solid var(--line);border-radius:14px;padding:6px;min-width:180px;box-shadow:var(--shadow)}
+#fab{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:18px;cursor:pointer;display:inline-grid;place-items:center;padding:0}
+#amenu{position:fixed;right:16px;top:78px;z-index:50;background:#101318;border:1px solid var(--line);border-radius:14px;padding:6px;min-width:180px;box-shadow:var(--shadow)}
 #amenu button{display:block;width:100%;text-align:left;background:none;border:0;color:#fff;padding:11px 12px;border-radius:9px;font:inherit;font-size:14px;cursor:pointer}
 #amenu button:hover{background:rgba(255,255,255,.07)}
 #ov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.65);display:grid;place-items:center;padding:16px}
@@ -201,6 +200,7 @@
         </div>
         <a class="nav-cta" href="https://wa.me/27670185846?text=Hi%20Pro%20Boys%20Auto%20Parts%2C%20I%27d%20like%20to%20enquire%20about%20a%20vehicle%20part.">WhatsApp us</a>
         <a class="btn btn-secondary mobile-menu" href="#enquiry">Enquire</a>
+        <button id="fab" type="button" aria-label="Admin menu" hidden>⚙</button>
       </nav>
     </div>
   </header>
@@ -269,7 +269,6 @@
 <div class="chips" id="filters"></div><div class="pgrid" id="grid"></div>
 <p class="emptyp" id="empty" hidden>New listings are coming soon. Message us on WhatsApp for any part you need.</p>
 </div></section>
-<button id="fab" type="button" aria-label="Admin">🔒</button>
 <div id="amenu" hidden><button data-a="add">＋ Add product</button><button data-a="manage">☰ Manage products</button><button data-a="out">Sign out</button></div>
 <div id="ov" hidden><div id="modal"></div></div>
 <section id="store">
@@ -453,7 +452,7 @@ Please let me know availability and price. Thank you.`;
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {getFirestore,collection,getDocs,addDoc,updateDoc,deleteDoc,doc,query,orderBy,serverTimestamp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 /* 1) Paste your Firebase web app config here (Project settings > Your apps > Web app) */
-const firebaseConfig={apiKey:'PASTE_API_KEY',authDomain:'PASTE_PROJECT.firebaseapp.com',projectId:'PASTE_PROJECT_ID',appId:'PASTE_APP_ID'};
+const firebaseConfig={apiKey:'AIzaSyCnnfYGLzxJgRBEzeJd_AzMF7adj5FL7XI',authDomain:'proboysauto-eff3b.firebaseapp.com',projectId:'proboysauto-eff3b',appId:'1:952329837407:web:b9d5a4bc30e2c0213d34ea'};
 const ADMINS=['moagil75@gmail.com','kabomoagi14@gmail.com'], WA='27670185846';
 const D=document,$=q=>D.querySelector(q);
 const el=(t,c,x)=>{const e=D.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
@@ -533,7 +532,10 @@ $('#fab').onclick=()=>{if(!ok){alert('Add your Firebase config in index.html fir
  if(!isAdmin)loginForm();else $('#amenu').hidden=!$('#amenu').hidden};
 $('#amenu').onclick=async e=>{const a=e.target.dataset.a;if(!a)return;$('#amenu').hidden=true;
  if(a==='add')productForm();else if(a==='manage')manage();else await signOut(auth)};
-function setAdmin(u){isAdmin=!!u&&ADMINS.includes((u.email||'').toLowerCase());$('#fab').textContent=isAdmin?'⚙':'🔒';$('#fab').classList.toggle('in',isAdmin);if(!isAdmin)$('#amenu').hidden=true}
+let shown=false;
+function setAdmin(u){isAdmin=!!u&&ADMINS.includes((u.email||'').toLowerCase());$('#fab').hidden=!isAdmin;if(!isAdmin)$('#amenu').hidden=true;
+ if(isAdmin&&location.hash==='#admin')history.replaceState(null,'',location.pathname+location.search);
+ if(!isAdmin&&location.hash==='#admin'&&!shown){shown=true;loginForm()}}
 load();
 if(ok)onAuthStateChanged(auth,setAdmin);
 </script>
